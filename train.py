@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import datetime
 import torch.autograd as autograd
 
-def train(train_iter, model, config):
+def train(train_iter, model, config, text_field):
     if config.CUDA:
         model.cuda()
     optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
@@ -13,11 +13,21 @@ def train(train_iter, model, config):
     model.train()
     for epoch in range(1, config.EPOCHS + 1):
         print("Epoch_{}_{}".format(epoch, datetime.datetime.now().strftime('%H-%M-%S')))
-        for batch in train_iter:
+        for i, batch in enumerate(train_iter):
+            # 调用text_field.vocab的itos、stoi函数 把batch.text中识别为0（unk）的字符找到，并定位该句子
             features, target = batch.text, batch.label
             features.t_(), target.sub_(1)
             if config.CUDA:
                 features, target = features.cuda(), target.cuda()
+            for j, sentence in enumerate(features):
+                for k, token in enumerate(sentence):
+                    if token == 0:
+                        print(batch.dataset.examples[i * config.BATCH_SIZE + j].text[k])
+
+            # for sentence in feature:
+            #       for token in sentence:
+            #           if token == 0:
+            #               then identify the id of sentence, token
             optimizer.zero_grad()
             log = model(features)
             loss = F.cross_entropy(log, target)

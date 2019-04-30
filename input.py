@@ -11,7 +11,7 @@ class Dataset(data.Dataset):
         self.index = -1
         flag = False
         if examples is None:
-            with open("new.csv", encoding="UTF8") as f:
+            with open("test.csv", encoding="UTF8") as f:
                 examples = []
                 for line in f:
                     sentence, label = line.strip().rsplit(",", 1)
@@ -33,7 +33,8 @@ class Dataset(data.Dataset):
         if hasattr(config, "SHUFFLE") and config.SHUFFLE: random.shuffle(examples)
         length = len(examples)
         test_size = int((0.1 / 2) * length)
-        train_examples = examples[: index - test_size].__add__(examples[: length - test_size])
+        # train_examples = examples[: index - test_size].__add__(examples[: length - test_size])
+        train_examples = examples[: index - test_size].__add__(examples[index+1: length - test_size])
         test_examples = examples[index - test_size: index].__add__(examples[length - test_size: length])
         return (cls(pos_label, text_field, label_field, examples=train_examples),
                 cls(pos_label, text_field, label_field, examples=test_examples))

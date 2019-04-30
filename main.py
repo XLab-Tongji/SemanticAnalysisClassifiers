@@ -4,13 +4,15 @@ from config import Config
 import models
 import torch
 import train
+import jieba
+jieba.load_userdict("userdict.txt")
 import jieba.posseg as pseg
 from torchtext.vocab import Vectors
 import warnings
 warnings.filterwarnings("ignore")
 
 def get_data_iter(text_field, label_field, config, weights):
-    train_data, test_data = Dataset.split("0", text_field, label_field, config)
+    train_data, test_data = Dataset.split("6", text_field, label_field, config)
     if config.PRETRAINED:
         assert weights is not None
         text_field.build_vocab([{key: 1} for key in weights.itos], vectors=weights)
@@ -20,14 +22,13 @@ def get_data_iter(text_field, label_field, config, weights):
     return data.Iterator(train_data, config.BATCH_SIZE), data.Iterator(test_data, config.BATCH_SIZE)
 
 def chinese_tokenizer(sentence):
-    exclusion = ["e", "x", "y"]  # e 叹词  x 非语素词  y 语气词
+    exclusion = ["x", "y"]  # e 叹词  x 非语素词  y 语气词
     return [word for (word, flag) in pseg.cut(sentence) if flag not in exclusion]
 
 def main():
     config = Config()
     text_field = data.Field(tokenize=chinese_tokenizer)
     label_field = data.Field(sequential=False)
-
 
     weights = Vectors(name=config.PRETRAINED_EMBEDDING, cache=".vector_cache/") if config.PRETRAINED and config.PRETRAINED_EMBEDDING is not None else None
     train_iter, test_iter = get_data_iter(text_field, label_field, config, weights)
@@ -42,14 +43,17 @@ def main():
         model = model.cuda()
 
     if hasattr(config, "TRAIN") and config.TRAIN:
-        train.train(train_iter, model, config)
+        train.train(train_iter, model, config, text_field)
     if hasattr(config, "TEST") and config.TEST:
         for i in range(5, config.EPOCHS + 1, 5):
             print("{} :".format(i), end="")
             model.load_state_dict(torch.load("ckpts/{}/snapshot_steps_{}.pt".format(type(model).__name__, i)))
             train.eval(test_iter, model, config)
     if hasattr(config, "PREDICT") and config.PREDICT:
-        model.load_state_dict(torch.load("ckpts/{}/snapshot_steps_15.pt".format(type(model).__name__)))
+        model.load_state_dict(torch.load("ckpts/{}/snapshot_steps_30.pt".format(type(model).__name__)))
+        # model.load_state_dict(torch.load("ckpts/{}/request.pt".format(type(model).__name__)))
+        # model.load_state_dict(torch.load("ckpts/{}/busy.pt".format(type(model).__name__)))
+        # model.load_state_dict(torch.load("ckpts/{}/decline.pt".format(type(model).__name__)))
         while True:
             print("---请输入---")
             sentence = input()
